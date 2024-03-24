@@ -96,3 +96,66 @@ qiita のほうを読むと、console の表示が古いのは setState が非�
     }
   };
   ```
+
+3/24(Sun)
+次はテスト設定を反映させる。
+まずはまだ覚えていない単語に絞って出題されるようにする。
+TestSetting から StartTest() を呼んでいるので、ここに設定内容を引数で渡す。
+
+setState で isOnlyUnpassed を Boolean で管理。
+未暗記のみ出題のチェックボックスを以下のようにし、 isOnlyUnpassed に反映させるようにした。
+```ts
+<h2>未暗記のみ出題</h2>
+<Checkbox
+  inputProps={{ "aria-label": "controlled" }}
+  onChange={handleCheckboxChange}
+  checked={isOnlyUnpassed}
+/>
+```
+
+そのうえで、 startTest に引数で isOnlyUnpassed を渡すようにした。
+無名関数を使うと引数を渡せた。
+
+```ts
+<Button
+  variant="contained"
+  size="large"
+  onClick={() => startTest(isOnlyUnpassed)}
+>
+  テスト開始
+</Button>
+```
+
+次にチェックされた品詞もクエリパラメータで渡せるようにする。
+以下のようにして condition という JSON 文字列を渡す。
+
+```ts
+  // テスト用の単語を取得
+  const fetchTestTango = async (
+    categories: String[],
+    isOnlyUnpassed: Boolean
+  ) => {
+    const condition = {
+      isOnlyUnpassed,
+      categories,
+    };
+    const res = await fetch(
+      `/api/test?condition=${JSON.stringify(condition)}`,
+      {
+        cache: "no-store",
+      }
+    );
+// 以下略
+```
+
+```ts
+// 2. 単語一覧を取得するAPI
+export async function GET(req: NextRequest) {
+  // クエリパラメータを変数に格納
+  const conditionsJson = req.nextUrl.searchParams.get('condition');
+    // JSONをパースしてオブジェクト配列に変換
+    const condition: Condition = conditionsJson ? JSON.parse(conditionsJson) : [];
+// 以下略
+```
+
+TestSetting からチェックが入った品詞を渡す。
