@@ -18,9 +18,10 @@ test/setting と test/result はやめて、 /test のコンポーネントと�
 
 残りタスク
 - 〇リザルトの覚えた件数が1ずれる
-- 覚えた数によってリザルトに表示する文字を変更する
+- 〇覚えた数によってリザルトに表示する文字を変更する
 - 単語追加・編集画面の品詞のラベルの位置がおかしい
-- テスト設定で入力した内容をテストに反映させる
+- 〇テスト設定で入力した内容をテストに反映させる
+- テストする単語をランダムにし、設定した数だけ出題されるようにする
 
 ### リザルトの覚えた件数が1ずれる
 最初の1問目で「覚えた」を押したときに 0 になっている。
@@ -159,3 +160,10 @@ export async function GET(req: NextRequest) {
 ```
 
 TestSetting からチェックが入った品詞を渡す。
+CategoryCheckBoxes コンポーネントから onCheckeboxChange 関数を TestSetting に渡し、チェックが入った品詞を都度 state で持つようにした。
+
+categories と isOnlyUnpassed を startTest 関数で Test コンポーネントに渡し、 fetchTestTango 関数で condition という JSON 文字列にし、クエリパラメータにして API に渡す。
+
+API 側でオブジェクト配列に変換し、 prisma の findMany の where に設定する。
+
+以上の内容で記事が書けるかもしれない。
