@@ -182,3 +182,108 @@ condition の JSON 文字列に tangoCount を追加して渡すようにした�
 
 API 側で取得した単語から slice 関数を使って渡された tangoCount の数にするようにした。
 さらに Fisher-Yatesアルゴリズムを使ってランダムにした後に slice するようにしたのでこれで完了。
+
+3/31(Sun)
+NextAuth.js を使ってログイン機能を実装する。
+その前にログイン画面の作成をする。
+一応、テーブルに user_id カラムは作ってあるが、単語取得などには使っていないので、ログイン機能が実装できたら
+ユーザーごとの単語を表示するよう修正する。
+
+NextAuth の導入は公式や以下の youtube 動画を見ながら行っていく。
+https://www.youtube.com/watch?v=2xexm8VXwj8
+
+まずはインストール。今回は beta 版の version5 で行う。
+↓ v5 のドキュメント
+https://authjs.dev/guides/upgrade-to-v5
+```
+npm install next-auth@beta
+```
+
+まずは Github の OAuth 認証から。
+
+auth.ts を作成。
+config という定数に設定を記載する。
+この config をどう使うのかというと、 auth.ts の中で以下をエクスポートする。
+```ts
+export const {handlers, auth, signIn, signOut} = NextAuth(config);
+```
+
+NextAuth 関数に config を渡してあげると、
+handlers, auth, signIn, signOut が使えるようになる。
+
+handlers は API を作るときに必要になる。
+auth はサーバーサイドでセッションを取得するときに使用する関数。
+
+次に middleware.ts を作成。
+リクエストを出す前に制限をかけたり変換したりする。
+リクエストが完了する前の処理を行うのがミドルウェア。
+
+middleware.ts では middleware() か default() が必要になる。
+auth.ts でエクスポートした auth() を middleware とする。
+```ts
+export { auth as middleware } from "@/auth";
+```
+
+これで config の中の authorized が機能するようになった。
+なお、現状はどの画面でも middleware が発火するようになっている。
+この middleware を適用するルーティングを正規表現で設定することができる。
+config の matcher に記述する。 
+
+```ts
+export const config = {
+  // このパスから始まる場合はミドルウェアを適用しない
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+};
+```
+
+次に handlers の中にある GET と POST を使って API を実装する。
+api ディレクトリの中に auth/[...nextauth]/route.ts を作成する。
+
+スプレッド構文のディレクトリ名はどういうことかというと、
+api/auth/ のパスの API は全てここで受け持つという意味になる。
+https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes#catch-all-segments
+
+この route.ts で handlers から GET と POST を取ってきた。
+
+ここで、 GIthub の認証なので、シークレットキー、クライアント ID などを環境変数に入れる。
+
+Github → Settings → Developer Settings → OAuth Apps
+で新しく登録する。
+Application name は適当に「eitango-app」とした。
+Homepage URL は「http://localhost:3000/」とした。
+
+Authorization callback URL は以下に書いてある Callback URL にした。
+example.com の部分は localhost に変えて「https://localhost:3000/api/auth/callback/github」となった。
+https://authjs.dev/reference/core/providers/github
+
+これで登録すると、 Client ID と Secret Key (こっちは Generate する)
+がわかるので、 .env にコピーする。
+
+```
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+```
+
+ドキュメントにもあるように、 Github に環境変数の2つを渡す。
+```ts
+providers: [Github({
+    clientId: process.env.GITHUB_ID,
+    clientSecret: process.env.GITHUB_SECRET
+})],
+```
+
+.env にはあと AUTH_SECRET と AUTH_URL が必要。
+AUTH_SECRET は以下のコマンドを実行して作成する。
+```
+openssl rand -hex 32
+```
+
+AUTH_URL には今回作成する API の URL http://localhost:3000/api/auth にする。
+
+これで環境変数の準備ができたので、 auth や signIn, signOut 関数を使っていく。
+
+ここでログインボタンなどの UI が必要になっているがまだ作っていない。
+この動画で作られているものの Github を確認して真似させてもらうか。
+
+とりあえず形だけのログイン画面とボタンを用意した。
+ログイン機能はコンポーネントの auth.tsx に書いていく。
