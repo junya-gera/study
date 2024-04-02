@@ -287,3 +287,22 @@ AUTH_URL には今回作成する API の URL http://localhost:3000/api/auth に
 
 とりあえず形だけのログイン画面とボタンを用意した。
 ログイン機能はコンポーネントの auth.tsx に書いていく。
+
+4/1(Mon)
+/login に page.tsx を作成し、 auth.tsx の SignIn コンポーネントを呼ぶ。
+セッション状態を確認し、セッションがなければログインしていないということなので、ログインボタン (SignIn コンポーネント) を表示する。
+ログインボタンを押すと Github の Auth 認証が行われるようにする。
+
+form タグで Server Actions という関数を使って実装する。
+https://zenn.dev/tsuboi/books/3f7a3056014458/viewer/chapter2
+
+```ts
+<form
+  action={async () => {
+    "use server";
+    await signIn(provider);
+  }}
+>
+```
+
+ここの signIn は auth.ts からエクスポートした関数。
