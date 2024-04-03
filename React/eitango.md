@@ -303,6 +303,31 @@ https://zenn.dev/tsuboi/books/3f7a3056014458/viewer/chapter2
     await signIn(provider);
   }}
 >
+  <Button type="submit" variant="contained" size="large" {...props}>
+    ログイン
+  </Button>
+</form>
 ```
 
 ここの signIn は auth.ts からエクスポートした関数。
+
+4/2(Tues)
+クリックしても何も起きなかったが、 Button に type="submit" を追加すると動いた。
+昨日は Github の認証画面に飛んだが、今日は「このページは動作していません」となる。
+なんかずっとエラーが出ているが、検索しても何も出てこずさっぱりわからない。
+```
+injected.js:4 Retrieving "b5x-stateful-inline-icon" flag errored: timed out - falling back
+```
+
+Github の OAuth Apps についてわかっていないので、それを先に調べる。
+
+4/3(Wed)
+上のエラーはわからないが、よく考えると Github の認証はすでにできていて、その後のリダイレクトがどこにもいっていない
+だけかもしれない。
+
+結局、ログインボタンを押した後の挙動がさっぱりわからない。 URL は以下のようになっている。
+http://localhost:3000/api/auth/callback/github?code=fd033abc2d2bd16846cc
+
+Github の認証画面が出たときは、 redirect to は localhost:3000 と記載されていた。
+
+<img src="images/1.png" class="center-img">
