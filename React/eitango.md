@@ -331,3 +331,22 @@ http://localhost:3000/api/auth/callback/github?code=fd033abc2d2bd16846cc
 Github の認証画面が出たときは、 redirect to は localhost:3000 と記載されていた。
 
 <img src="images/1.png" class="center-img">
+
+4/10(Wed)
+テストを見てみると、出題数の部分がバグっていた。
+- 未暗記のみにチェックして8問にすると2問、7問にすると3問出題される
+- 未暗記のみのチェックを外すと必ず全部出題される
+
+1つ目は slice() の仕様を間違えていた。
+slice() は引数の数字の番号から最後までをコピーする関数だった。
+例えば以下の場合は2を渡しても3つコピーされる。
+
+```js
+const animals = ['ant', 'bison', 'camel', 'duck', 'elephant'];
+
+console.log(animals.slice(2));
+// Expected output: Array ["camel", "duck", "elephant"]
+```
+
+slice(0, condition.tangoCount) とすれば、最初から tangoCount 個コピーしてくれるのでこれが正しい。
+未暗記以外の場合は単純にランダムにして文字数を制限する処理を書いていなかった。
