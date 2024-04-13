@@ -350,3 +350,13 @@ console.log(animals.slice(2));
 
 slice(0, condition.tangoCount) とすれば、最初から tangoCount 個コピーしてくれるのでこれが正しい。
 未暗記以外の場合は単純にランダムにして文字数を制限する処理を書いていなかった。
+
+
+```SQL
+AND
+(
+  ((TB3.APP_KBN IS NULL AND TB1.OG1_CD IS NULL) OR TB3.OG1_CD IS NULL)
+  OR ((TB3.APP_KBN IS NULL AND TB1.OG1_CD IN (SELECT OG1_CD FROM [skb].[M_ORGANIZATION_1_CNTR] WHERE CNTR_2 = 1)) OR TB3.OG1_CD IN (SELECT OG1_CD FROM [skb].[M_ORGANIZATION_1_CNTR] WHERE CNTR_2 = 1)
+  )
+)
+```

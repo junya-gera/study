@@ -101,5 +101,6 @@ react-render-state-not-updating
 
 とりあえず記事のファイルを作成。
 あとはクロージャの説明を考えながら書いていく。
-↓ ここが簡単に説明されているので参考になるかも。
+↓ この辺が簡単に説明されているので参考になるかも。
 https://nowokay.hatenablog.com/entries/2011/11/15#1321333375
+https://qiita.com/satomi310/items/685951139983f913adeb
