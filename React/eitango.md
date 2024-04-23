@@ -99,6 +99,7 @@ qiita のほうを読むと、console の表示が古いのは setState が非�
   ```
 
 3/24(Sun)
+### テスト設定
 次はテスト設定を反映させる。
 まずはまだ覚えていない単語に絞って出題されるようにする。
 TestSetting から StartTest() を呼んでいるので、ここに設定内容を引数で渡す。
@@ -184,7 +185,8 @@ API 側で取得した単語から slice 関数を使って渡された tangoCou
 さらに Fisher-Yatesアルゴリズムを使ってランダムにした後に slice するようにしたのでこれで完了。
 
 3/31(Sun)
-NextAuth.js を使ってログイン機能を実装する。
+### NextAuth.js を使ってログイン機能を実装する
+
 その前にログイン画面の作成をする。
 一応、テーブルに user_id カラムは作ってあるが、単語取得などには使っていないので、ログイン機能が実装できたら
 ユーザーごとの単語を表示するよう修正する。
@@ -352,11 +354,57 @@ slice(0, condition.tangoCount) とすれば、最初から tangoCount 個コピ�
 未暗記以外の場合は単純にランダムにして文字数を制限する処理を書いていなかった。
 
 
-```SQL
-AND
-(
-  ((TB3.APP_KBN IS NULL AND TB1.OG1_CD IS NULL) OR TB3.OG1_CD IS NULL)
-  OR ((TB3.APP_KBN IS NULL AND TB1.OG1_CD IN (SELECT OG1_CD FROM [skb].[M_ORGANIZATION_1_CNTR] WHERE CNTR_2 = 1)) OR TB3.OG1_CD IN (SELECT OG1_CD FROM [skb].[M_ORGANIZATION_1_CNTR] WHERE CNTR_2 = 1)
-  )
-)
+4/14(Sun)
+Github 認証がうまくいかない問題がようやく解決した。
+出ていたエラーで検索したらよかった。
 ```
+TypeError: next_dist_server_web_exports_next_request__WEBPACK_IMPORTED_MODULE_0__ is not a constructor
+```
+
+上のエラーで検索したら以下の記事が見つかった。
+http://blog.livedoor.jp/ragi_d/archives/65910068.html#5-4
+
+.env に AUTH_URL=http://localhost:3000 を書いているとこのエラーが出るらしい。
+いずれ安定版で修正されるらしい。
+これで記事を書きたい。
+
+そもそも .env の AUTH_URL はなんのために書くのか。
+Auth.js のドキュメントを見ると、v5 ではホストがリクエストヘッダーから推測されるため、ほぼいらないらしい。
+https://authjs.dev/getting-started/deployment
+https://authjs.dev/getting-started/migrating-to-v5
+
+ただ、別の base path を使用している場合は記載する必要があるらしい。
+別のとは何と別のパス？
+→ これはいいか。
+
+v5 以前は Next.js のアプリケーションを本番環境にデプロイする際には、NEXTAUTH_URL にサイトの正規の URL を設定する必要があったが、
+v5 ではリクエストヘッダーからホストを自動検出するため、記載は不要。
+とだけ書けばいい。
+
+4/17(Wed)
+今週中に以下をやりたい。
+- ログイン・ログアウトボタンをちゃんと作る
+- GitHub 認証が成功したら GitHub のアイコンを表示
+- ユーザー名とパスワードでもログインできるようにする
+
+4/20(Satur)
+上3つの後は以下をやっていきたい。
+- 認証時にユーザーデータを作成する
+- ユーザーごとの単語を登録・表示できるようにする
+
+- 英単語の音声を AWS Polly で流せるようにする
+- 未暗記の単語一覧を週に1回 LINE に送信する
+
+
+久々に単語一覧を見ようとしたらエラーで見れない。
+→ .env から以下を削除していたからだった。
+```
+DATABASE_URL="file:./dev.db"
+```
+
+これは SQLite で参照しているファイルのパスだったらしい。
+
+気を取り直してログイン機能をちゃんと実装していく。
+まずはログイン画面が最初に表示されるようにする。
+具体的には /login 以外にアクセスしたときにセッション情報がない場合、 /login に遷移してほしい。
+これはどうしたらいい？
