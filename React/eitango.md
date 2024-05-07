@@ -408,3 +408,41 @@ DATABASE_URL="file:./dev.db"
 まずはログイン画面が最初に表示されるようにする。
 具体的には /login 以外にアクセスしたときにセッション情報がない場合、 /login に遷移してほしい。
 これはどうしたらいい？
+
+5/7(Tues)
+https://zenn.dev/tsuboi/books/3f7a3056014458/viewer/chapter3
+の「ログイン状態に応じたアクセス制御の実装」を参考にしてやってみる。
+
+https://authjs.dev/getting-started/session-management/protecting#nextjs-middleware
+の公式を見ると、You can also use the auth method as a wrapper if you’d like to implement more logic inside the middleware. とのこと。
+書いてあるとおり以下のようにすると、なぜか http://login/localhost:3000/ にリダイレクトされる。
+```ts
+import { auth } from "@/auth"
+ 
+export default auth((req) => {
+  if (!req.auth) {
+    const url = req.url.replace(req.nextUrl.pathname, "/login")
+    return Response.redirect(url)
+  }
+})
+```
+
+以下のようにしてみると、今度は「リダイレクトが繰り返し行われました。」となる。
+
+```ts
+export default auth((req) => {
+  if (!req.auth) {
+    return Response.redirect(new URL("/login", req.url));
+  }
+});
+```
+
+以下にすると次は Error: URL is malformed "/login". Please use only absolute URLs - https://nextjs.org/docs/messages/middleware-relative-urls と表示される。
+
+```ts
+export default auth((req) => {
+  if (!req.auth) {
+    return Response.redirect("/login");
+  }
+});
+```

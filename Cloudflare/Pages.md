@@ -80,3 +80,29 @@ Cron Triggers are ideal for running periodic jobs, such as for maintenance or ca
 
 まずは数秒おきに console.log でも定期実行を試してみる。
 それができたら Google Photos API の使い方を調べて画像を取ってこれるようにする。
+
+4/28(Sun)
+Workers の Cron Triggers について調べる。
+https://zenn.dev/toraco/articles/55f359cbf94862
+
+ダッシュボードの Cron イベントというところを見ると毎分実行されていた！
+最初にデプロイしてしまったからか。3日間実行されっぱなしだった。
+
+wrangler.toml を以下のようにして cron を止める。
+```
+[triggers]
+crons = []
+```
+
+npx Wrangler deploy コマンドを実行してデプロイしようとしたが、以下のエラーが表示された。
+Missing entry-point: The entry-point should be specified via the command line (e.g. `wrangler deploy path/to/script`) or the `main` config field.
+
+entry-point は wrangler.toml の main = "src/index.ts" を見ている。
+実行しているディレクトリがひとつ上だったため、 src/index.ts がなかっただけだった。
+これでデプロイは成功したが、なぜかトリガーが削除されなかった。
+
+ダッシュボードの「設定」→「トリガー」から cron の設定が表示されているところの点3つをクリックすると削除ができるのでそれで削除した。
+画面から Cron イベントがなくなっていた。
+
+とにかくこれで定期実行できることがわかったので、 Google フォトから画像を取ってくるのとそれを R2 に保存する方法を調べる。
+
