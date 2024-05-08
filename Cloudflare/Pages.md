@@ -106,3 +106,75 @@ entry-point は wrangler.toml の main = "src/index.ts" を見ている。
 
 とにかくこれで定期実行できることがわかったので、 Google フォトから画像を取ってくるのとそれを R2 に保存する方法を調べる。
 
+5/8(Wed)
+https://developers.cloudflare.com/r2/get-started/
+の公式を参考に、 R2 のバケットを作成する。
+クレジットカードを登録しないといけないので登録した。
+
+R2 の前に Google photos api が先かと思うので、
+https://qiita.com/doran/items/8695e6007765ab5b382c
+https://qiita.com/doran/items/15b2c59adb410ddeeb8a#13-api%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E3%82%AD%E3%83%BC%E5%8F%96%E5%BE%97
+https://developers.google.com/photos/library/guides/get-started?hl=ja
+の記事を参考にまずは API を使える状態にする。
+
+「承認済みの JavaScript 生成元」がよくわからなかったが、とりあえず https://edcd4bde.cloudflare-jw-test.pages.dev にしておいた。
+これで必要な ID は作成できた。これらが書かれている json をダウンロードしておいた。
+
+ChatGPT が作成してくれたソースコードで試してみる。
+R2 がまだない。
+
+wrangler r2 bucket create photosTest
+このコマンドを実行してバケットを作ろうとしたが、
+The specified bucket name is not valid. [code: 10005]
+と表示される。
+
+https://github.com/cloudflare/workers-sdk/issues/3227
+を見ると大文字やハイフンが使えないらしい。全部小文字にしたら作成できた。
+
+workers に以下を追加。アカウント ID は R2 の画面の右上に書いてあった。
+account_id = 
+workers_dev = true
+
+google photos library API を使って画像を取ってくる部分の検証。
+https://developers.google.com/photos/library/guides/list?hl=ja
+の REST を見ると、 oauth2-token というものが必要だが、これがどこにあるかわからない。
+
+https://zenn.dev/ficilcom/articles/f518ce531b2d42
+https://qiita.com/Cheap-Engineer/items/f849b9b1c2a4da9e25c1
+この辺を見ると、ブラウザである URL を入れるとトークンがわかるらしい。
+
+```js
+function getAuthUrl() {
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const clientId = '1234hoge-fuga.apps.googleusercontent.com';
+  const redirectUri = 'https://hogefuga.co.jp/L/exec';
+  const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/spreadsheets','https://www.googleapis.com/auth/script.external_request'];
+
+  //スペース区切りでJOIN
+  const scope = scopes.join(' ');
+
+  //認証コード取得用URL生成
+  const requestUrl = `${authUrl}?scope=${scope}&access_type=offline&prompt=consent&include_granted_scope=true&response_type=code&redirect_uri=${redirectUri}&client_id=${clientId}`;
+  Logger.log(requestUrl);
+}
+```
+
+clientId はダウンロードした JSON にある。
+scopes は https://www.googleapis.com/auth/photoslibrary.readonly だけでいいと思われる。
+redirectUri はなに？
+
+Google API の認証情報の画面で OAuth 2.0 クライアント ID とサービスアカウントというものが選択できるが、
+これらの違いを ChatGPT に聞いてみたところ、
+OAuth 2.0 クライアント ID はユーザー認証、サービスアカウントはサービス間通信に使用されるものらしい。
+そのため、 workers ではサービスアカウントのほうを使用すると思われる。
+
+以下にサービスアカウントを使用して workers で google api を使用するソースコードが書かれていた。
+https://github.com/Schachte/cloudflare-google-auth
+↑
+嘘だった。ユーザーデータにアクセスする際は OAuth 2.0 クライアント ID でないといけないらしい。
+
+リダイレクト URI は workers のルートになっていた https://long-heart-c221.aa106921.workers.dev/ にした。
+これで上に書いた js で作られた URL をブラウザで確認。
+google のアカウントを聞かれたのでおこげりんを選択。
+
+https://long-heart-c221.aa106921.workers.dev/ の code= の後にトークンらしき文字列が記載されていた。
