@@ -178,3 +178,74 @@ https://github.com/Schachte/cloudflare-google-auth
 google のアカウントを聞かれたのでおこげりんを選択。
 
 https://long-heart-c221.aa106921.workers.dev/ の code= の後にトークンらしき文字列が記載されていた。
+
+
+取得した認証コードを使用して、以下のコマンドをコマンドプロンプトで実行。
+https://blog.shinonome.io/google-api/ を参考にした。
+
+```
+curl -X POST \
+     --data "code=手順2で取得した認可コード" \
+     --data "client_id=クライアントID" \
+     --data "client_secret=クライアントシークレット" \
+     --data "redirect_uri=リダイレクトURI" \
+     --data "grant_type=authorization_code" \
+     https://accounts.google.com/o/oauth2/token
+```
+
+アクセストークンを取得できた。
+```
+{
+  "access_token": "hogehoge",
+  "expires_in": 3599,
+  "refresh_token": "fugafuga",
+  "scope": "https://www.googleapis.com/auth/photoslibrary.readonly",
+  "token_type": "Bearer"
+}
+```
+
+
+5/9(Thurs)
+なんとかエラーなく処理を書き、npx wrangler deploy でデプロイし、ダッシュボードのリアルタイムログで確認。
+scheduled() がないと言われた。
+
+{
+  "outcome": "exception",
+  "scriptVersion": {
+    "id": "a18c36c3-0e56-4f3f-9bc9-37d0f4531f51"
+  },
+  "scriptName": "long-heart-c221",
+  "diagnosticsChannelEvents": [],
+  "exceptions": [
+    {
+      "name": "Error",
+      "message": "Handler does not export a scheduled() function",
+      "timestamp": 1715230200675
+    }
+  ],
+  "logs": [],
+  "eventTimestamp": 1715230200665,
+  "event": {
+    "cron": "*/5 * * * *",
+    "scheduledTime": 1715230200000
+  },
+  "id": 0
+}
+
+```ts
+// eslint-disable-next-line import/no-anonymous-default-export
+export default {
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ScheduledEvent) {
+    ctx.waitUntil(putImage(env));
+  },
+};
+```
+
+こうするとログでは Ok となるが、 R2 に何も保存されていない。
+
+手元の js ファイルにこの処理を移し、実行してみると 401 になっていた。
+トークンを作成し直して、 mediaItems の API を実行してみたところ、 mediaItem の後の id を指定する部分に 1 と入れていたが
+これは間違いで、ランダムな文字列が id になっているようだった。
+適当に id を選んで API に入れて workers を動かしたところ、 R2 に画像が保存されていた。
+
+その後、 album を取得する API を実行し、その album 内の最新5件の画像を保存するよう修正できた。
