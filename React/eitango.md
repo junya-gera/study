@@ -446,3 +446,171 @@ export default auth((req) => {
   }
 });
 ```
+
+5/11(Satur)
+いったんミドルウェアの設定は諦めて、ユーザー名とパスワードでのログイン機能を実装する。
+いったん公式を参考にやってみる。
+https://authjs.dev/getting-started/authentication/credentials
+
+以下がどういうことなのかわからないので早速詰まった。
+```ts
+import { saltAndHashPassword } from "@/utils/password"
+```
+
+よく見たら自分で実装しなさいということだった。
+時間がかかりそうなのでこれも後回し。
+
+ユーザーごとの単語を登録できるようにするのもあるが、先に面白そうな
+英単語の音声を流す機能を実装する。
+
+まずは情報集めと検討。
+とりあえず一覧画面に音声ボタンの列を追加し、それをクリックすると音声が流れるようにしたい。
+
+自分のブログを参考にする。
+API はまずそれ単体で実装して確認すべしというのを最近業務内で学んだので、
+アプリとの連携は後にして、まずは渡した文字の音声データを返す Lambda の作成を行う。
+
+以下のコマンドを my-app ディレクトリ下で実行して serverless のサービスを作成する。
+serverless create --template aws-nodejs --name polly-sound --path polly-sound
+
+polly-sound というディレクトリが作成され、 gitignore, handler.js, serverless.yml が入っていた。
+handler.mjs に変更した。なんか怒られている。
+Parsing error: Cannot find module 'next/babel'
+
+https://qiita.com/huntas0624/items/37c8ffb97a7a039bd75e
+を参考に、 .eslintrc.json を以下のように修正したらエラーが消えた。
+"extends": ["next", "next/core-web-vitals", "prettier", "next/babel"]
+
+handler.mjs, serverless.yml を GPT に聞きながら書いていく。
+
+全体の流れとしては、
+「音声ボタン」をクリック → Next 内で Lambda の関数 URL を叩く
+→ Lambda 内で event に入っているテキストを使って音声データを取得
+→ Next 内でその音声を再生する
+
+最後以外はだいたいイメージがつく。
+Next で音声を再生するのはどうしたらいいか GPT に聞く。
+→ HTML や JS の機能でできそうなので、これはそこまでいったらちゃんと調べる。
+
+いったん sls deploy し、作成された lambda 関数の関数 URL を有効にした。
+
+handler.mjs の以下の部分の accessKey については、 sls を使っていればいらなさそうなので削除。
+```js
+const polly = new AWS.Polly({
+  region: 'your-region', // 例: 'us-west-2'
+  accessKeyId: 'your-access-key-id',
+  secretAccessKey: 'your-secret-access-key'
+});
+```
+
+これで関数 URL を実行したとき、 event には何が渡されるのか、
+画面上の英単語のテキストを渡すにはどうしたらいいのか調べる。
+
+GPT によると以下のようにリクエストボディに入れたらいいらしいのでこれで試してみる。
+```ts
+    const lambdaFunctionUrl =
+      "";
+    const response = await fetch(lambdaFunctionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phrase }),
+    });
+```
+
+AWS のコンソール上と POSTMAN では音声の URL が返され、それにブラウザでアクセスすると音声が出力された。
+後はこれをアプリ上で流すようにするだけだが、音声ボタンを押すと CORS のエラーが発生している。
+
+phrases:1 Access to fetch at 'https://pplqdoyywduhu3svdzbn3tgl440dkzlu.lambda-url.us-west-2.on.aws/' from origin 'http://localhost:3000' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.
+
+まずは CORS の理解が足りていないので以下で勉強。
+https://coliss.com/articles/build-websites/operation/work/cs-visualized-cors.html
+https://qiita.com/att55/items/2154a8aad8bf1409db2b
+
+http:localhost:3000 から Lambda 関数 URL へのアクセスが許可されていない。
+serverless の公式を見たところ、以下のように書けそうだったので試してみた。
+
+```yml
+    cors:
+      allowedOrigins:
+        - http://localhost:3000
+      allowedHeaders:
+        - Content-Type
+      allowedMethods:
+        - POST
+```
+
+`cors: true` という書き方もできるらしいが、オールオッケーになるので今回叩く API の仕様通りに設定した。
+→ 変わらなかった。
+
+公式をよく見ると url の下にかかっていた。
+```yml
+functions:
+  generateSpeech:
+    handler: handler.generateSpeech
+    url:
+      cors:
+        allowedOrigins:
+          - http://localhost:3000
+        allowedHeaders:
+          - Content-Type
+        allowedMethods:
+          - POST
+```
+
+関数 URL に対して設定するからこうなる。
+ちなみにコンソール画面の関数 URL のメニューでも CORS の設定ができた。
+たぶん、 API Gateway でも CORS の設定はできるのでそっちを使っていたら早かったかも。
+
+その後、なぜか sls deploy で Unable to retrieve FunctionUrl attribute for AWS::Lambda::Url, with error message The resource you requested does not exist.
+というエラーが出ていたが、 CloudFormation のスタックを削除して作り直すと CORS エラーが消えた！
+
+後は音声を鳴らせるだけ。
+以下のようにしたが鳴りそうでならない。
+
+```ts
+export default function AudioPlayback(props: { phrase: string }) {
+  const [audioUrl, setAudioUrl] = useState<string>("");
+  const handlePlayButtonClick = async () => {
+    const url = await getAudioUrl(props.phrase);
+    setAudioUrl(url);
+    const audio = document.getElementById("btn_audio") as HTMLAudioElement;
+    console.log(audio);
+    audio.play();
+  };
+
+  return (
+    <>
+      <Box>
+        <button onClick={handlePlayButtonClick}>Play</button>
+      </Box>
+      <audio id="btn_audio">
+        <source src={audioUrl} type="audio/mp3" />
+      </audio>
+    </>
+  );
+}
+```
+
+https://developer.mozilla.org/ja/docs/Web/API/HTMLAudioElement
+を見て、以下のようにしたらいけた！！！
+
+```ts
+export default function AudioPlayback(props: { phrase: string }) {
+  const handlePlayButtonClick = async () => {
+    const url = await getAudioUrl(props.phrase);
+    const audio = new Audio(url);
+    audio.play();
+  };
+
+  return (
+    <>
+      <AudiotrackIcon
+        sx={{ cursor: "pointer" }}
+        onClick={handlePlayButtonClick}
+      />
+    </>
+  );
+}
+```
