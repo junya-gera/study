@@ -614,3 +614,13 @@ export default function AudioPlayback(props: { phrase: string }) {
   );
 }
 ```
+
+5/14(Tues)
+関数 URL を環境変数で管理したいが、 fetch 関数に入れたときに型が違うと怒られた。
+
+```ts
+    const lambdaFunctionUrl = process.env.AUDIO_LAMBDA_URL;
+    const response = await fetch(lambdaFunctionUrl, {
+```
+
+lambdaFunctionUrl が string と undefined のどちらかの可能性があり、
