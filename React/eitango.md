@@ -626,3 +626,12 @@ export default function AudioPlayback(props: { phrase: string }) {
 ```
 
 lambdaFunctionUrl が string と undefined のどちらかの可能性があり、
+
+
+5/28(Tues)
+今週やること
+- コードレビュー
+- テスト時、単語を切り替えたときに音声が自動で鳴るようにする
+- 自動で鳴らすかどうかを切り換えるボタンを用意する
+- 週に1回、未暗記の単語一覧を通知する
+    - Serverless Framework で SNS と EventBridge を使えばできる？
