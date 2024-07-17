@@ -7,3 +7,12 @@ DB: DynamoDB
 サーバー: なし
 ストレージ: S3
 認証: Auth.js
+
+
+
+React
+TypeScript
+Next.js
+GraphQL
+Vite
+Storybook

@@ -635,3 +635,143 @@ lambdaFunctionUrl が string と undefined のどちらかの可能性があり�
 - 自動で鳴らすかどうかを切り換えるボタンを用意する
 - 週に1回、未暗記の単語一覧を通知する
     - Serverless Framework で SNS と EventBridge を使えばできる？
+
+
+6/16(Sun)
+Serverless Framework で週に1回未暗記の単語を通知する実装をする。
+まずはサービスの作成。
+
+serverless create --template aws-nodejs --name notice-unpassed-tango --path notice-unpassed-tango
+
+npm init して、 npm i @prisma/client して layer の設定をした。
+ちなみに @aws-sdk はインストールせずとも備え付けられているらしい。
+
+serverless.yml
+```yml
+service: notify-unpassed-words
+frameworkVersion: "3"
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-west-2
+  environment:
+    SNS_TOPIC_ARN:
+      Ref: UnpassedWordsSNSTopic
+    DATABASE_URL: ${env:DATABASE_URL}
+
+functions:
+  notifyUnpassedWords:
+    handler: handler.notifyUnpassedWords
+    events:
+      - schedule:
+          rate: rate(1 minute) # 毎週月曜日の午前9時に実行
+          enabled: true
+    layers:
+      - { Ref: AwsLayerLambdaLayer }
+
+resources:
+  Resources:
+    UnpassedWordsSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: UnpassedWordsSNSTopic
+
+    UnpassedWordsEmailSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: ${env:EMAIL_ENDPOINT} # 受信するメールアドレスを指定
+        Protocol: email
+        TopicArn:
+          Ref: UnpassedWordsSNSTopic
+
+layers:
+  awsLayer:
+    path: aws-layer
+```
+
+handler.mjs
+```js
+// // dotenv パッケージをインポートして、環境変数をロードします
+// import dotenv from 'dotenv';
+
+// PrismaClient を Prisma パッケージからインポートします
+import { PrismaClient } from '@prisma/client';
+
+// AWS SDK の SNS クライアントをインポートします
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+
+// // dotenv を使って .env ファイルの内容をロードします
+// dotenv.config();
+
+const prisma = new PrismaClient();
+const snsClient = new SNSClient({ region: 'us-west-2' });
+
+export const notifyUnpassedWords = async () => {
+  try {
+    const unpassedTangos = await prisma.tango.findMany({
+      where: {
+        isPassed: false
+      }
+    });
+
+    if (unpassedTangos.length > 0) {
+      const message = `You have ${unpassedTangos.length} unpassed words. Keep studying!`;
+
+      // SNS トピックへのメッセージ送信コマンドを作成します
+      const command = new PublishCommand({
+        Message: message,
+        TopicArn: process.env.SNS_TOPIC_ARN
+      });
+
+      // SNS クライアントを使ってメッセージを送信します
+      await snsClient.send(command);
+
+      console.log('Notification sent successfully.');
+    } else {
+      console.log('No unpassed words found.');
+    }
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  } finally {
+    // Prisma クライアントの接続を切断します
+    await prisma.$disconnect();
+  }
+};
+```
+
+これで1分置きに実行される設定で sls deploy して試してみたが、以下のエラーが出た。
+```json
+2024-06-20T13:22:54.235Z	undefined	ERROR	Uncaught Exception 	
+{
+    "errorType": "Error",
+    "errorMessage": "@prisma/client did not initialize yet. Please run \"prisma generate\" and try to import it again.",
+    "stack": [
+        "Error: @prisma/client did not initialize yet. Please run \"prisma generate\" and try to import it again.",
+        "    at new PrismaClient (/opt/nodejs/node_modules/.prisma/client/default.js:43:11)",
+        "    at file:///var/task/handler.mjs:13:16",
+        "    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)",
+        "    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)",
+        "    at async _tryAwaitImport (file:///var/runtime/index.mjs:1008:16)",
+        "    at async _tryRequire (file:///var/runtime/index.mjs:1057:86)",
+        "    at async _loadUserApp (file:///var/runtime/index.mjs:1081:16)",
+        "    at async UserFunction.js.module.exports.load (file:///var/runtime/index.mjs:1119:21)",
+        "    at async start (file:///var/runtime/index.mjs:1282:23)",
+        "    at async file:///var/runtime/index.mjs:1288:1"
+    ]
+}
+```
+
+いったん Prisma 公式を見ながらやってみる。
+https://www.prisma.io/docs/orm/prisma-client/deployment/serverless/deploy-to-aws-lambda#deploying-with-the-serverless-framework
+
+試してみたが、同じエラーのままだった。
+そもそも公式には layer とかなかったが問題ないのか？
+ていうか作り直した node_modules を aws-layer/nodejs に入れてなかった。
+
+Error:
+Stack:arn:aws:cloudformation:us-west-2:975486960068:stack/notify-unpassed-words-dev/7eb18e50-2f1c-11ef-a737-029a943fbf85 is in UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS state and can not be updated.
+
+が、駄目・・・！！！
+一度最初からやり直してみるか。
