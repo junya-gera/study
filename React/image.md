@@ -50,3 +50,19 @@ const nextConfig = {
 export default nextConfig;
 ```
 
+7/17(Wed)
+Retina ディスプレイについて
+https://tcd-theme.com/2019/04/retina-display.html
+
+「適切な Retina 対応サイズ (倍解像度) にリサイズ」とは、
+HP に使用する画像の適切なサイズの倍の解像度にしたうえで、
+表示時はその半分のサイズで表示するということ。
+
+★★★ では
+
+webp 形式とは
+- 2010年 に Google が開発した新型の画像ファイル形式
+- 従来の JPEG や PNG などの画像ファイル形式に比べて、高い圧縮効率と品質を実現
+- 可逆圧縮・非可逆圧縮の両方に対応している
+- PNG と同じように背景の透過処理ができる
+→ GIMP のエクスポートで webp を選択できた
