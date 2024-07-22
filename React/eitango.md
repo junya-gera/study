@@ -775,3 +775,44 @@ Stack:arn:aws:cloudformation:us-west-2:975486960068:stack/notify-unpassed-words-
 
 が、駄目・・・！！！
 一度最初からやり直してみるか。
+
+7/22(Mon)
+schema.prisma を以下のようにしてみたがだめだった。
+
+```
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+```
+
+─ Error sending notification: PrismaClientInitializationError: 
+Invalid `prisma.tango.findMany()` invocation:
+
+```
+Prisma Client could not locate the Query Engine for runtime "debian-openssl-3.0.x".
+
+This is likely caused by a bundler that has not copied "libquery_engine-debian-openssl-3.0.x.so.node" next to the resulting bundle.
+Ensure that "libquery_engine-debian-openssl-3.0.x.so.node" has been copied next to the bundle or in "../node_modules/.prisma/client".
+
+We would appreciate if you could take the time to share some information with us.
+Please help us by answering a few questions: https://pris.ly/engine-not-found-bundler-investigation
+
+The following locations have been searched:
+  /home/junya-wada/z06-react/junya-wada/my-app/notify-unpassed-words/.serverless/node_modules/.prisma/client
+  /home/junya-wada/z06-react/junya-wada/my-app/notify-unpassed-words/.serverless
+  /home/junya-wada/z06-react/junya-wada/my-app/node_modules/@prisma/client
+  /home/junya-wada/z06-react/junya-wada/my-app/.prisma/client
+  /tmp/prisma-engines
+    at In.handleRequestError (/home/junya-wada/z06-react/junya-wada/my-app/notify-unpassed-words/.serverless/build/handler.js:122:7169)
+    at In.handleAndLogRequestError (/home/junya-wada/z06-react/junya-wada/my-app/notify-unpassed-words/.serverless/build/handler.js:122:6203)
+    at In.request (/home/junya-wada/z06-react/junya-wada/my-app/notify-unpassed-words/.serverless/build/handler.js:122:5911)
+    at async l (/home/junya-wada/z06-react/junya-wada/my-app/notify-unpassed-words/.serverless/build/handler.js:127:11167)
+    at async sd (/home/junya-wada/z06-react/junya-wada/my-app/notify-unpassed-words/.serverless/build/handler.js:162:4175)
+    at async file:///home/junya-wada/.serverless/releases/4.1.16/package/lib/plugins/aws/dev/local-lambda/runtime-wrappers/node.js:167:24 {
+  clientVersion: '5.15.1',
+  errorCode: undefined
+}
+```
+
+このエラーがなんなのか全くわからないのでしっかり調べて勉強する。
