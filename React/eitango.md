@@ -816,3 +816,37 @@ The following locations have been searched:
 ```
 
 このエラーがなんなのか全くわからないのでしっかり調べて勉強する。
+
+7/24(Wed)
+エラーメッセージを見ると、 debian-openssl-3.0.x というバイナリがコピーされていないと書かれている。
+Ubuntu 22.04 は debian-openssl-3.0.x と書かれていた。
+https://www.prisma.io/docs/orm/reference/prisma-schema-reference#specify-custom-binarytargets-to-ensure-compatibility-with-the-os
+
+最初、 serverless dev で debian-openssl-3.0.x が作成されていないのかと思っていた。
+https://github.com/prisma/prisma/discussions/21508
+https://github.com/prisma/prisma/issues/23009
+
+が、このバイナリを作るには npx prisma client をする必要があり、それができていなかった。
+notify-unpassed-words ディレクトリで以下を実行。
+```
+npm install prisma --save-dev
+npm install @prisma/client
+npx prisma generate
+```
+
+すると node_modules の .prisma/client に
+
+↓ これでできそうか？
+https://kiririmode.hatenablog.jp/entry/20220619/1655622443
+Prisma の公式にも書いている
+https://www.prisma.io/docs/orm/prisma-client/deployment/serverless/deploy-to-aws-lambda
+
+7/26(Fri)
+相談したところ、結局 Prisma Client を含めたデプロイは手動でパッケージを作らないと難しそうだった。
+そもそも Prisma Client がサーバーありきのものなので、サーバーレスには向かない。
+SQLite も実行環境ごとにバイナリが必要になるので、ローカルで動かす分には簡単だが、クラウドを介すと面倒くさくなる。
+
+また、Serverless レイヤーについてはメインプロジェクトとは別で作るほうがいい。
+sls remove をしたときにレイヤーも一緒に消えてしまったりとこちらも面倒くさそう。
+
+Serverless Framework を使うなら DynamoDB や Aurora などサーバーレスに対応した DB を使うほうがよい。
